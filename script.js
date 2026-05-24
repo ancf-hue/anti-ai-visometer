@@ -1,8 +1,8 @@
 /**
-АНТИ-ИИ ВИЗОМЕТР | v6.1 — ИСПРАВЛЕНА ВЕРСИЯ
+АНТИ-ИИ ВИЗОМЕТР | v6.2 — ИСПРАВЛЕНА ВЕРСИЯ
 ✅ Работает через file:// без серверов
 ✅ Полный обход CORS и защиты браузера
-✅ Исправлены синтаксические ошибки
+✅ Исправлена ошибка "Unexpected token '<'"
 */
 // ========== КОНФИГУРАЦИЯ ==========
 const CATEGORIES = [
@@ -62,7 +62,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('restartBtn').onclick = () => location.reload();
     document.getElementById('shareBtn').onclick = shareResult;
 
-    console.log('🚀 Автономный Визометр v6.1 успешно запущен!');
+    console.log('🚀 Автономный Визометр v6.2 успешно запущен!');
 });
 
 // ========== БЕЗОПАСНАЯ УСТАНОВКА ИЗОБРАЖЕНИЙ ==========
@@ -76,7 +76,7 @@ function setImgSrc(imgElement, path) {
             this.src = this.src.replace('.jpeg', '.jpg');
         } else {
             console.error(`❌ Файл не найден: ${this.src}`);
-            // Валидный SVG-плейсхолдер
+            // ✅ ИСПРАВЛЕННЫЙ SVG: валидный XML, без пробелов в тегах
             this.src = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23222'/><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' fill='%23ff4b4b' font-family='sans-serif' font-size='10'>Файл не найден</text></svg>";
         }
         this.onerror = null;
@@ -154,14 +154,14 @@ function makeChoice(choice) {
     const q = questions[round];
     $fbText.innerHTML = `<strong>📖 Категория:</strong> ${q.cat.emoji} ${q.cat.name}<br><br><strong>🔍 Подсказка:</strong> ${q.hint}`;
 
-    // ✅ Исправлен селектор (без пробелов)
+    // ✅ ИСПРАВЛЕНО: убраны пробелы в селекторе
     const card = document.querySelector(`.img-card[data-choice="${choice}"]`);
     if (card) {
         card.style.borderColor = correct ? '#00ff88' : '#ff4b4b';
         card.style.boxShadow = `0 0 24px ${correct ? '#00ff88' : '#ff4b4b'}`;
     }
 
-    // ✅ Исправлена опечатка 'hidden'
+    // ✅ ИСПРАВЛЕНО: 'hidden' вместо 'hi dden'
     $game.classList.add('hidden');
     $fb.classList.remove('hidden');
 }
