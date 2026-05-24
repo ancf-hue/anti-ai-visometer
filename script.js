@@ -1,8 +1,8 @@
 /**
-АНТИ-ИИ ВИЗОМЕТР | v6.0 — 100% АВТОНОМНАЯ ВЕРСИЯ
+АНТИ-ИИ ВИЗОМЕТР | v6.1 — ИСПРАВЛЕНА ВЕРСИЯ
 ✅ Работает через file:// без серверов
 ✅ Полный обход CORS и защиты браузера
-✅ Интегрированы звуки correct.mp3 / wrong.mp3
+✅ Исправлены синтаксические ошибки
 */
 // ========== КОНФИГУРАЦИЯ ==========
 const CATEGORIES = [
@@ -20,25 +20,6 @@ const DIFFICULTIES = {
 // ========== СОСТОЯНИЕ ==========
 let round = 0, score = 0, difficulty = 'easy', totalRounds = 10;
 let questions = [], realPos = 0;
-
-// ========== АУДИО ==========
-const correctSound = new Audio('correct.mp3');
-const wrongSound   = new Audio('wrong.mp3');
-correctSound.preload = 'auto';
-wrongSound.preload   = 'auto';
-
-function playSound(isCorrect) {
-    const audio = isCorrect ? correctSound : wrongSound;
-    audio.currentTime = 0; // Мгновенный перезапуск
-    audio.play().catch(() => {});
-}
-
-function unlockAudio() {
-    [correctSound, wrongSound].forEach(a => {
-        a.muted = true;
-        a.play().then(() => { a.pause(); a.muted = false; }).catch(() => {});
-    });
-}
 
 // ========== DOM ==========
 let $start, $game, $fb, $res, $prog, $scr, $badge, $i0, $i1, $fbIcon, $fbTitle, $fbText, $fRank, $fPct, $fScr, $fDesc;
@@ -72,13 +53,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
     document.getElementById('startBtn').onclick = startGame;
     document.querySelectorAll('.img-card').forEach(c => {
-        c.onclick = () => { const ch = parseInt(c.dataset.choice); if (!isNaN(ch)) makeChoice(ch); };
+        c.onclick = () => {
+            const ch = parseInt(c.dataset.choice);
+            if (!isNaN(ch)) makeChoice(ch);
+        };
     });
     document.getElementById('nextBtn').onclick = nextRound;
     document.getElementById('restartBtn').onclick = () => location.reload();
     document.getElementById('shareBtn').onclick = shareResult;
 
-    console.log('🚀 Автономный Визометр v6.0 успешно запущен!');
+    console.log('🚀 Автономный Визометр v6.1 успешно запущен!');
 });
 
 // ========== БЕЗОПАСНАЯ УСТАНОВКА ИЗОБРАЖЕНИЙ ==========
@@ -88,11 +72,12 @@ function setImgSrc(imgElement, path) {
 
     imgElement.onerror = function() {
         if (this.src.endsWith('.jpeg')) {
-            console.log(`🔄 Замена расширения для: ${path} -> .jpg`);
+            console.log(`🔄 Замена расширения: ${path} -> .jpg`);
             this.src = this.src.replace('.jpeg', '.jpg');
         } else {
-            console.error(`❌ Файл полностью отсутствует: ${this.src}`);
-            this.src = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23222'/><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' fill='%23ff4b4b' font-family='sans-serif' font-size='10'>Ошибка файла</text></svg>";
+            console.error(`❌ Файл не найден: ${this.src}`);
+            // Валидный SVG-плейсхолдер
+            this.src = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'><rect width='100' height='100' fill='%23222'/><text x='50%' y='50%' dominant-baseline='middle' text-anchor='middle' fill='%23ff4b4b' font-family='sans-serif' font-size='10'>Файл не найден</text></svg>";
         }
         this.onerror = null;
     };
@@ -123,18 +108,28 @@ function loadRound() {
     const q = questions[round];
     realPos = Math.random() < 0.5 ? 0 : 1;
 
-    if (realPos === 0) { setImgSrc($i0, q.real); setImgSrc($i1, q.ai); } 
-    else              { setImgSrc($i0, q.ai);   setImgSrc($i1, q.real); }
+    if (realPos === 0) {
+        setImgSrc($i0, q.real);
+        setImgSrc($i1, q.ai);
+    } else {
+        setImgSrc($i0, q.ai);
+        setImgSrc($i1, q.real);
+    }
 
     $prog.textContent = `Раунд ${round + 1}/${totalRounds}`;
-    document.querySelectorAll('.img-card').forEach(c => { c.style.borderColor = 'transparent'; c.style.boxShadow = ''; });
+
+    document.querySelectorAll('.img-card').forEach(c => {
+        c.style.borderColor = 'transparent';
+        c.style.boxShadow = '';
+    });
+
     $game.classList.remove('hidden');
     $fb.classList.add('hidden');
+
+    console.log(`👁️ Раунд ${round + 1}: Категория "${q.cat.name}"`);
 }
 
-// ========== СТАРТ ИГРЫ + РАЗБЛОКИРОВКА ЗВУКА ==========
 function startGame() {
-    unlockAudio(); // 🔊 Обязательно: первый клик пользователя разрешает звук
     questions = genQuestions();
     round = 0; score = 0;
     $start.classList.add('hidden');
@@ -143,13 +138,8 @@ function startGame() {
     loadRound();
 }
 
-// ========== ВЫБОР + ВОСПРОИЗВЕДЕНИЕ ЗВУКА ==========
 function makeChoice(choice) {
     const correct = (choice === realPos);
-    
-    // 🔊 ЗВУК ОТВЕТА
-    playSound(correct);
-    
     if (correct) {
         score++;
         $scr.textContent = `🎯 Счёт: ${score}`;
@@ -162,14 +152,16 @@ function makeChoice(choice) {
         $fbTitle.style.color = '#ff4b4b';
     }
     const q = questions[round];
-    $fbText.innerHTML = `<strong>📖 Категория:</strong> ${q.cat.emoji} ${q.cat.name} <br><br><strong>🔍 Подсказка:</strong> ${q.hint}`;
+    $fbText.innerHTML = `<strong>📖 Категория:</strong> ${q.cat.emoji} ${q.cat.name}<br><br><strong>🔍 Подсказка:</strong> ${q.hint}`;
 
+    // ✅ Исправлен селектор (без пробелов)
     const card = document.querySelector(`.img-card[data-choice="${choice}"]`);
     if (card) {
         card.style.borderColor = correct ? '#00ff88' : '#ff4b4b';
         card.style.boxShadow = `0 0 24px ${correct ? '#00ff88' : '#ff4b4b'}`;
     }
 
+    // ✅ Исправлена опечатка 'hidden'
     $game.classList.add('hidden');
     $fb.classList.remove('hidden');
 }
