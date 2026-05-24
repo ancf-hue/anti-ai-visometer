@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Анти-ИИ Визометр</title>
+    <link rel="icon" type="image/x-icon" href="favicon.ico">
+    <style>
+        :root {
+            --neon-blue: #00f2fe; --neon-purple: #a18cd1;
+            --correct: #00ff88; --wrong: #ff4b4b;
+            --glass: rgba(255,255,255,0.05); --glass-border: rgba(255,255,255,0.1);
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: radial-gradient(circle at 20% 30%, #0f0c29, #302b63, #24243e);
+            min-height: 100vh; display: flex; justify-content: center; align-items: center;
+            font-family: system-ui, -apple-system, sans-serif; padding: 20px; color: #fff;
+        }
+        .glass-card {
+            background: var(--glass); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+            border: 1px solid var(--glass-border); border-radius: 40px;
+            padding: 32px; width: 100%; max-width: 1050px; box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+        }
+        .screen.hidden { display: none !important; }
+        h1, h2.screen-title {
+            font-size: 2.1rem; text-align: center;
+            background: linear-gradient(135deg, #fff, var(--neon-blue), var(--neon-purple));
+            -webkit-background-clip: text; background-clip: text; color: transparent;
+            margin-bottom: 12px; font-weight: 700;
+        }
+        .subtitle { text-align: center; color: rgba(255,255,255,0.7); margin-bottom: 28px; }
+        .logo-container { display: flex; justify-content: center; margin-bottom: 15px; }
+        .app-logo { width: 70px; height: 70px; object-fit: contain; filter: drop-shadow(0 0 10px rgba(0, 242, 254, 0.5)); }
+        .difficulty-selector { display: flex; justify-content: center; gap: 12px; margin-bottom: 28px; flex-wrap: wrap; }
+        .difficulty-btn { background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.15); padding: 10px 20px; border-radius: 30px; cursor: pointer; color: #fff; transition: all 0.2s; font-size: 0.95rem; }
+        .difficulty-btn.active { background: linear-gradient(135deg, rgba(0,242,254,0.2), rgba(161,140,209,0.2)); border-color: var(--neon-blue); box-shadow: 0 0 12px rgba(0,242,254,0.3); }
+        .main-btn { background: linear-gradient(135deg, var(--neon-blue), var(--neon-purple)); border: none; padding: 14px 40px; border-radius: 50px; font-size: 1.1rem; font-weight: 600; color: #fff; cursor: pointer; display: block; width: 100%; max-width: 280px; margin: 0 auto; transition: transform 0.1s; }
+        .main-btn:active { transform: scale(0.98); }
+        .stats { display: flex; justify-content: space-between; align-items: center; padding: 12px 18px; background: rgba(0,0,0,0.35); border-radius: 50px; margin-bottom: 24px; flex-wrap: wrap; gap: 10px; }
+        .image-container { display: flex; gap: 20px; margin: 16px 0; flex-wrap: wrap; }
+        .img-card { flex: 1; min-width: 220px; background: rgba(0,0,0,0.4); border-radius: 20px; overflow: hidden; cursor: pointer; border: 2px solid transparent; transition: all 0.2s; }
+        .img-card:hover { border-color: var(--neon-blue); box-shadow: 0 0 25px rgba(0,242,254,0.2); }
+        .img-wrapper { width: 100%; height: 260px; background: #1a1a2e; }
+        .img-card img { width: 100%; height: 100%; object-fit: cover; display: block; }
+        .img-label { padding: 10px; text-align: center; background: rgba(0,0,0,0.6); font-size: 0.85rem; font-weight: 600; }
+        .vs-divider { display: flex; align-items: center; font-size: 1.4rem; color: var(--neon-blue); font-weight: 700; }
+        .feedback-hint { background: rgba(0,0,0,0.35); border-radius: 18px; padding: 20px; margin: 20px 0; border-left: 4px solid var(--neon-blue); line-height: 1.5; }
+        .result-score { text-align: center; margin: 20px 0; }
+        #final-percent { font-size: 2.8rem; font-weight: 800; background: linear-gradient(135deg, var(--neon-blue), #fff); -webkit-background-clip: text; background-clip: text; color: transparent; display: block; }
+        #final-desc { text-align: center; margin: 16px 0; padding: 18px; background: rgba(0,0,0,0.3); border-radius: 16px; line-height: 1.5; }
+        .actions { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; margin-top: 20px; }
+        .secondary-btn { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); padding: 12px 24px; border-radius: 50px; cursor: pointer; color: #fff; }
+        @media (max-width: 768px) { .image-container { flex-direction: column; } .vs-divider { display: none; } .img-wrapper { height: 200px; } .stats { flex-direction: column; text-align: center; border-radius: 20px; } h1, h2.screen-title { font-size: 1.7rem; } }
+    </style>
+</head>
+<body>
+<div class="glass-card">
+    <div id="start-screen" class="screen">
+        <div class="logo-container"><img src="favicon.ico" alt="Логотип Визометр" class="app-logo"></div>
+        <h1>АНТИ-ИИ ВИЗОМЕТР</h1>
+        <p class="subtitle">Отличай реальность от нейросетей. Работает полностью офлайн.</p>
+        <div class="difficulty-selector">
+            <button class="difficulty-btn active" data-diff="easy">🟢 Лёгкий</button>
+            <button class="difficulty-btn" data-diff="medium">🟡 Средний</button>
+            <button class="difficulty-btn" data-diff="hard">🔴 Сложный</button>
+        </div>
+        <button id="startBtn" class="main-btn">Начать тест</button>
+        <p style="text-align:center; font-size:0.75rem; color:rgba(255,255,255,0.4); margin-top:20px;">🎯 10 раундов • Выбери РЕАЛЬНОЕ фото</p>
+    </div>
+
+    <div id="game-screen" class="screen hidden">
+        <div class="stats">
+            <span id="progress">Раунд 1/10</span>
+            <span id="score">🎯 Счёт: 0</span>
+            <span id="difficulty-badge" style="padding:4px 12px; border-radius:20px; background:rgba(0,0,0,0.4); font-size:0.85rem;">🟢 Лёгкий</span>
+        </div>
+        <div class="image-container">
+            <div class="img-card" data-choice="0"><div class="img-wrapper"><img id="img0" src="" alt="A"></div><div class="img-label">ИЗОБРАЖЕНИЕ A</div></div>
+            <div class="vs-divider">VS</div>
+            <div class="img-card" data-choice="1"><div class="img-wrapper"><img id="img1" src="" alt="B"></div><div class="img-label">ИЗОБРАЖЕНИЕ B</div></div>
+        </div>
+        <p style="text-align:center; margin-top:20px; color:rgba(255,255,255,0.65); font-size:0.9rem;">👆 Нажми на изображение, которое считаешь <strong>РЕАЛЬНЫМ</strong></p>
+    </div>
+
+    <div id="feedback-screen" class="screen hidden">
+        <div style="font-size:4.5rem; text-align:center; margin-bottom:15px;" id="feedback-icon">✅</div>
+        <h2 id="feedback-title" class="screen-title">ПРАВИЛЬНО!</h2>
+        <div class="feedback-hint"><p id="feedback-text"></p></div>
+        <button id="nextBtn" class="main-btn">Следующий раунд →</button>
+    </div>
+
+    <div id="result-screen" class="screen hidden">
+        <div style="font-size:4.5rem; text-align:center; margin-bottom:15px;">🏆</div>
+        <h2 id="final-rank" class="screen-title">Эксперт</h2>
+        <div class="result-score">
+            <span id="final-percent">0%</span>
+            <span id="final-score" style="display:block; color:rgba(255,255,255,0.8); font-size:1.1rem;">0 из 10</span>
+        </div>
+        <p id="final-desc"></p>
+        <div class="actions">
+            <button id="restartBtn" class="main-btn" style="width:auto; padding:12px 28px;">🔄 Пройти ещё раз</button>
+            <button id="shareBtn" class="secondary-btn">📤 Поделиться</button>
+        </div>
+    </div>
+</div>
+<script src="script.js"></script>
+</body>
+</html>
