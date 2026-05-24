@@ -1,7 +1,8 @@
 /**
-АНТИ-ИИ ВИЗОМЕТР | v7.0 — ПРОДАКШН
-✅ Исправлена ошибка "Unexpected token '<'"
-✅ Валидный SVG, корректные селекторы, без пробелов
+АНТИ-ИИ ВИЗОМЕТР | v7.1 — ПРОДАКШН + ЗВУК
+✅ Исправлены синтаксические ошибки
+✅ Интегрирован звук (correct.mp3 / wrong.mp3)
+✅ Разблокировка аудио при старте
 */
 const CATEGORIES = [
   { id: 'animals', name: 'Животные', emoji: '🐶', hint: 'Смотрите на шерсть, глаза, лапы' },
@@ -14,6 +15,24 @@ const DIFFICULTIES = {
   medium: { id: 'medium', label: '🟡 Средний',  files: [4, 5, 6] },
   hard:   { id: 'hard',   label: '🔴 Сложный',  files: [7, 8, 9, 10] }
 };
+
+// ========== АУДИО ==========
+const correctSound = new Audio('correct.mp3');
+const wrongSound   = new Audio('wrong.mp3');
+[correctSound, wrongSound].forEach(s => s.preload = 'auto');
+
+function playSound(isCorrect) {
+  const audio = isCorrect ? correctSound : wrongSound;
+  audio.currentTime = 0;
+  audio.play().catch(e => console.warn('🔊 Звук заблокирован:', e));
+}
+
+function unlockAudio() {
+  [correctSound, wrongSound].forEach(a => {
+    a.muted = true;
+    a.play().then(() => { a.pause(); a.muted = false; }).catch(()=>{});
+  });
+}
 
 let round = 0, score = 0, difficulty = 'easy', totalRounds = 10;
 let questions = [], realPos = 0;
@@ -109,6 +128,7 @@ function loadRound() {
 }
 
 function startGame() {
+  unlockAudio(); // 🔊 Разблокируем звук при первом клике
   questions = genQuestions();
   round = 0; score = 0;
   $start.classList.add('hidden');
@@ -119,6 +139,10 @@ function startGame() {
 
 function makeChoice(choice) {
   const correct = (choice === realPos);
+  
+  // 🔊 Воспроизводим звук
+  playSound(correct);
+
   if (correct) {
     score++;
     $scr.textContent = `🎯 Счёт: ${score}`;
