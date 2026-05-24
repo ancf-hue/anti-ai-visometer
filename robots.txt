@@ -1,0 +1,17 @@
+# robots.txt для Анти-ИИ Визометр
+# Сайт: https://anti-ai-visometer.vercel.app/
+
+User-agent: *
+Allow: /
+
+# Разрешаем индексацию главной страницы
+Disallow: /images/
+
+# Запрещаем индексацию служебных путей (если появятся)
+Disallow: /*?*
+
+# Указываем путь к карте сайта
+Sitemap: https://anti-ai-visometer.vercel.app/sitemap.xml
+
+# Оптимизация для поисковиков
+Crawl-delay: 1
