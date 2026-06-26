@@ -104,6 +104,281 @@
         </div>
     </div>
 </div>
-<script src="script.js"></script>
+
+<script>
+// ============================================================
+//  АНТИ-ИИ ВИЗОМЕТР — полностью офлайн, все данные встроены
+// ============================================================
+
+// ---------- БАЗА ИЗОБРАЖЕНИЙ (BASE64) ----------
+// Реальные фото (сгенерированы программно для демонстрации)
+const REAL_IMAGES = [
+    'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="400" viewBox="0 0 400 400"%3E%3Crect width="400" height="400" fill="%23333"/%3E%3Ccircle cx="200" cy="200" r="120" fill="%2344aaff"/%3E%3Ccircle cx="160" cy="160" r="20" fill="%23fff"/%3E%3Ccircle cx="240" cy="160" r="20" fill="%23fff"/%3E%3Cellipse cx="200" cy="230" rx="40" ry="20" fill="%23ff6b6b"/%3E%3C/svg%3E',
+    'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="400"%3E%3Crect fill="%232d5a27" width="400" height="400"/%3E%3Crect x="50" y="250" width="300" height="100" fill="%238b5a2b"/%3E%3Crect x="100" y="180" width="40" height="70" fill="%238b5a2b"/%3E%3Cpolygon points="50,250 200,150 350,250" fill="%234a8c3f"/%3E%3C/svg%3E',
+    'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="400"%3E%3Crect fill="%231a237e" width="400" height="400"/%3E%3Ccircle cx="200" cy="200" r="100" fill="%23f9ca24"/%3E%3Ccircle cx="200" cy="200" r="70" fill="%23f0932b"/%3E%3C/svg%3E'
+];
+
+// ИИ-изображения (артефакты, искажения)
+const AI_IMAGES = [
+    'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="400"%3E%3Crect fill="%231a1a2e" width="400" height="400"/%3E%3Crect x="50" y="50" width="300" height="300" fill="%234a4a6a"/%3E%3Crect x="80" y="80" width="240" height="240" fill="%236a6a8a"/%3E%3Crect x="110" y="110" width="180" height="180" fill="%238a8aaa"/%3E%3Crect x="140" y="140" width="120" height="120" fill="%23aaaaaa"/%3E%3C/svg%3E',
+    'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="400"%3E%3Crect fill="%23222222" width="400" height="400"/%3E%3Ccircle cx="200" cy="200" r="150" fill="%23ff00ff" opacity="0.3"/%3E%3Ccircle cx="200" cy="200" r="100" fill="%2300ffff" opacity="0.3"/%3E%3Ccircle cx="200" cy="200" r="50" fill="%23ffff00" opacity="0.3"/%3E%3C/svg%3E',
+    'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="400"%3E%3Crect fill="%23333" width="400" height="400"/%3E%3Cpath d="M50,50 L350,350 M50,350 L350,50" stroke="%23ff4444" stroke-width="5"/%3E%3C/svg%3E'
+];
+
+// ---------- ИГРОВОЙ ДВИЖОК ----------
+let game = {
+    difficulty: 'easy',
+    round: 0,
+    maxRounds: 10,
+    score: 0,
+    currentPair: null,
+    isPlaying: false
+};
+
+// DOM-элементы
+const screens = {
+    start: document.getElementById('start-screen'),
+    game: document.getElementById('game-screen'),
+    feedback: document.getElementById('feedback-screen'),
+    result: document.getElementById('result-screen')
+};
+
+const els = {
+    img0: document.getElementById('img0'),
+    img1: document.getElementById('img1'),
+    progress: document.getElementById('progress'),
+    score: document.getElementById('score'),
+    difficultyBadge: document.getElementById('difficulty-badge'),
+    feedbackIcon: document.getElementById('feedback-icon'),
+    feedbackTitle: document.getElementById('feedback-title'),
+    feedbackText: document.getElementById('feedback-text'),
+    finalPercent: document.getElementById('final-percent'),
+    finalScore: document.getElementById('final-score'),
+    finalRank: document.getElementById('final-rank'),
+    finalDesc: document.getElementById('final-desc')
+};
+
+// ---------- ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ----------
+function shuffleArray(arr) {
+    for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+}
+
+function getRandomItem(arr) {
+    return arr[Math.floor(Math.random() * arr.length)];
+}
+
+function showScreen(name) {
+    Object.keys(screens).forEach(key => {
+        screens[key].classList.toggle('hidden', key !== name);
+    });
+}
+
+function getDifficultyEmoji(diff) {
+    return diff === 'easy' ? '🟢' : diff === 'medium' ? '🟡' : '🔴';
+}
+
+function getDifficultyLabel(diff) {
+    return diff === 'easy' ? 'Лёгкий' : diff === 'medium' ? 'Средний' : 'Сложный';
+}
+
+// ---------- ГЕНЕРАЦИЯ РАУНДА ----------
+function generatePair() {
+    const diff = game.difficulty;
+    let realPool = [...REAL_IMAGES];
+    let aiPool = [...AI_IMAGES];
+    
+    // Для сложности: больше ИИ-артефактов
+    if (diff === 'hard') {
+        aiPool = [...AI_IMAGES, ...AI_IMAGES, ...AI_IMAGES];
+    } else if (diff === 'medium') {
+        aiPool = [...AI_IMAGES, ...AI_IMAGES];
+    }
+    
+    const real = getRandomItem(realPool);
+    const ai = getRandomItem(aiPool);
+    
+    // Перемешиваем: 0 или 1 — реальное
+    const realIndex = Math.random() < 0.5 ? 0 : 1;
+    const images = realIndex === 0 ? [real, ai] : [ai, real];
+    
+    return {
+        images: images,
+        realIndex: realIndex,
+        realData: real,
+        aiData: ai
+    };
+}
+
+// ---------- ОТОБРАЖЕНИЕ РАУНДА ----------
+function showRound() {
+    if (game.round >= game.maxRounds) {
+        endGame();
+        return;
+    }
+    
+    game.currentPair = generatePair();
+    els.img0.src = game.currentPair.images[0];
+    els.img1.src = game.currentPair.images[1];
+    els.progress.textContent = `Раунд ${game.round + 1}/${game.maxRounds}`;
+    els.score.textContent = `🎯 Счёт: ${game.score}`;
+    
+    // Сбрасываем стили карточек
+    document.querySelectorAll('.img-card').forEach(card => {
+        card.style.borderColor = 'transparent';
+        card.style.cursor = 'pointer';
+    });
+    
+    showScreen('game');
+}
+
+// ---------- ОБРАБОТКА ВЫБОРА ----------
+function handleChoice(choiceIndex) {
+    if (!game.currentPair || game.isPlaying) return;
+    game.isPlaying = true;
+    
+    const isCorrect = choiceIndex === game.currentPair.realIndex;
+    if (isCorrect) game.score++;
+    
+    // Визуальная обратная связь на карточках
+    const cards = document.querySelectorAll('.img-card');
+    cards.forEach((card, index) => {
+        card.style.cursor = 'default';
+        if (index === game.currentPair.realIndex) {
+            card.style.borderColor = '#00ff88';
+        } else {
+            card.style.borderColor = '#ff4b4b';
+        }
+    });
+    
+    // Показываем экран обратной связи
+    const icon = document.getElementById('feedback-icon');
+    const title = document.getElementById('feedback-title');
+    const text = document.getElementById('feedback-text');
+    
+    if (isCorrect) {
+        icon.textContent = '✅';
+        title.textContent = 'ПРАВИЛЬНО!';
+        title.style.color = '#00ff88';
+    } else {
+        icon.textContent = '❌';
+        title.textContent = 'НЕПРАВИЛЬНО!';
+        title.style.color = '#ff4b4b';
+    }
+    
+    // Подсказка: какая картинка была реальной
+    const realLabel = game.currentPair.realIndex === 0 ? 'A' : 'B';
+    text.innerHTML = `
+        <strong>Реальное изображение было под буквой ${realLabel}.</strong><br>
+        ${isCorrect ? 'Отлично! Ты не дал себя обмануть.' : 'Осторожно — нейросети становятся всё лучше!'}<br>
+        <small style="color:rgba(255,255,255,0.5);">Раунд ${game.round + 1}/${game.maxRounds}</small>
+    `;
+    
+    // Обновляем счёт
+    els.score.textContent = `🎯 Счёт: ${game.score}`;
+    
+    showScreen('feedback');
+    game.isPlaying = false;
+}
+
+// ---------- СЛЕДУЮЩИЙ РАУНД ----------
+function nextRound() {
+    game.round++;
+    showRound();
+}
+
+// ---------- ЗАВЕРШЕНИЕ ИГРЫ ----------
+function endGame() {
+    const percent = Math.round((game.score / game.maxRounds) * 100);
+    let rank, desc;
+    
+    if (percent >= 90) {
+        rank = '🏆 Легендарный детектор';
+        desc = 'Ты видишь то, что скрыто от обычных глаз. Нейросети бессильны!';
+    } else if (percent >= 70) {
+        rank = '🔥 Эксперт-аналитик';
+        desc = 'Ты хорошо отличаешь реальность от дипфейков. Продолжай тренироваться!';
+    } else if (percent >= 50) {
+        rank = '👀 Внимательный наблюдатель';
+        desc = 'Неплохо, но нейросети всё ещё могут тебя обмануть.';
+    } else {
+        rank = '🤖 Обманут ИИ';
+        desc = 'Тренируй внимательность — нейросети становятся всё более реалистичными.';
+    }
+    
+    els.finalPercent.textContent = `${percent}%`;
+    els.finalScore.textContent = `${game.score} из ${game.maxRounds}`;
+    els.finalRank.textContent = rank;
+    els.finalDesc.textContent = desc;
+    
+    showScreen('result');
+}
+
+// ---------- СБРОС ИГРЫ ----------
+function resetGame() {
+    game.round = 0;
+    game.score = 0;
+    game.isPlaying = false;
+    game.currentPair = null;
+    showScreen('start');
+}
+
+// ---------- ИНИЦИАЛИЗАЦИЯ ----------
+function init() {
+    // Кнопка старта
+    document.getElementById('startBtn').addEventListener('click', () => {
+        game.round = 0;
+        game.score = 0;
+        showRound();
+    });
+    
+    // Кнопка "Следующий раунд"
+    document.getElementById('nextBtn').addEventListener('click', nextRound);
+    
+    // Кнопка "Пройти ещё раз"
+    document.getElementById('restartBtn').addEventListener('click', resetGame);
+    
+    // Кнопка "Поделиться"
+    document.getElementById('shareBtn').addEventListener('click', () => {
+        if (navigator.share) {
+            navigator.share({
+                title: 'Анти-ИИ Визометр',
+                text: `Я набрал ${els.finalPercent.textContent} в тесте на распознавание ИИ! А ты сможешь лучше?`,
+                url: window.location.href
+            }).catch(() => {});
+        } else {
+            alert('Скопируйте ссылку и поделитесь с друзьями!');
+        }
+    });
+    
+    // Выбор сложности
+    document.querySelectorAll('.difficulty-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            document.querySelectorAll('.difficulty-btn').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            game.difficulty = this.dataset.diff;
+            document.getElementById('difficulty-badge').textContent = 
+                `${getDifficultyEmoji(game.difficulty)} ${getDifficultyLabel(game.difficulty)}`;
+        });
+    });
+    
+    // Клик по карточкам
+    document.querySelectorAll('.img-card').forEach(card => {
+        card.addEventListener('click', function() {
+            const choice = parseInt(this.dataset.choice);
+            handleChoice(choice);
+        });
+    });
+    
+    // Начальный экран
+    showScreen('start');
+}
+
+// Запуск при загрузке
+document.addEventListener('DOMContentLoaded', init);
+</script>
 </body>
 </html>
